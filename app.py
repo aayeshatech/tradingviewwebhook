@@ -4,8 +4,9 @@ import requests
 app = Flask(__name__)
 
 # ✅ Ensure this is your actual working bot token
-BOT_TOKEN = "7613703350:AAEDKBLlNqjqQPfoe892_t_dSfuPjExppPs"
-CHAT_ID = "-1002840229810"  # ✅ Your Telegram group ID
+BOT_TOKEN = '7613703350:AAGIvRqgsG_yTcOlFADRSYd_FtoLOPwXDKk'
+CHAT_ID = '-1002840229810'
+
 
 @app.route('/')
 def index():
