@@ -3,19 +3,16 @@ import requests
 
 app = Flask(__name__)
 
-# ✅ Ensure this is your actual working bot token
-BOT_TOKEN = '7613703350:AAGIvRqgsG_yTcOlFADRSYd_FtoLOPwXDKk'
-CHAT_ID = '-1002840229810'
-
+BOT_TOKEN = "7613703350:AAGIvRqgsG_yTcOlFADRSYd_FtoLOPwXDKk"
+CHAT_ID = "-1002840229810"
 
 @app.route('/')
 def index():
-    return "Webhook is live!"
+    return "✅ Webhook is live and ready."
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.get_json()
-    print("Received data:", data)  # Optional for debug
 
     symbol = data.get("symbol", "Unknown")
     price = data.get("price", "N/A")
@@ -23,17 +20,13 @@ def webhook():
 
     message = f"🚨 {alert_type.upper()} Alert\nSymbol: {symbol}\nPrice: {price}"
 
-    # ✅ Telegram message post
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
         "text": message
     }
 
-    # Send the Telegram message
     response = requests.post(url, json=payload)
-
-    # Log Telegram response
     print("Telegram response:", response.status_code, response.text)
 
     return "OK", 200
