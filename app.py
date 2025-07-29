@@ -3,30 +3,28 @@ import requests
 
 app = Flask(__name__)
 
-BOT_TOKEN = "7613703350:AAGIvRqgsG_yTcOlFADRSYd_FtoLOPwXDKk"
-CHAT_ID = "-1002840229810"
+BOT_TOKEN = '7613703350:AAGIvRqgsG_yTcOlFADRSYd_FtoLOPwXDKk'
+CHAT_ID = '-1002840229810'
 
-@app.route('/')
-def index():
-    return "✅ Webhook is live and ready."
-
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    data = request.get_json()
-
-    symbol = data.get("symbol", "Unknown")
-    price = data.get("price", "N/A")
-    alert_type = data.get("alert_type", "Alert")
-
-    message = f"🚨 {alert_type.upper()} Alert\nSymbol: {symbol}\nPrice: {price}"
-
+def send_telegram_message(message):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
-        "chat_id": CHAT_ID,
-        "text": message
+        'chat_id': CHAT_ID,
+        'text': message,
+        'parse_mode': 'Markdown'
     }
+    return requests.post(url, data=payload)
 
-    response = requests.post(url, json=payload)
-    print("Telegram response:", response.status_code, response.text)
+@app.route('/', methods=['POST'])
+def webhook():
+    data = request.json
+    message = f"📩 *TradingView Alert Received:*\n\n{data.get('ticker', 'N/A')} | {data.get('price', 'N/A')}\n\n{data.get('message', str(data))}"
+    send_telegram_message(message)
+    return {'status': 'ok'}, 200
 
-    return "OK", 200
+@app.route('/', methods=['GET'])
+def home():
+    return "✅ TradingView Webhook is Live", 200
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
