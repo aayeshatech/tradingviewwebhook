@@ -4,21 +4,24 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Health check endpoint
-@app.route('/health')
-def health():
-    return "OK", 200
+# Health check endpoint (handles GET and HEAD)
+@app.route('/', methods=['GET', 'HEAD'])
+def health_check():
+    if request.method == 'HEAD':
+        # Return headers only (no body) for HEAD requests
+        return '', 200
+    return "Webhook server is running", 200
 
-# Main webhook endpoint (handles both root and /webhook)
-@app.route('/', methods=['GET', 'POST'])
+# Main webhook endpoint
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    if request.method == 'GET':
-        return "Webhook server is running", 200
-        
+    # Only parse JSON for POST requests
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Invalid JSON"}), 415
+    
     data = request.get_json()
     if not data:
-        return jsonify({"status": "error", "message": "Invalid JSON"}), 400
+        return jsonify({"status": "error", "message": "Empty JSON"}), 400
 
     # Process alert
     log_entry = {
@@ -32,6 +35,11 @@ def webhook():
     
     print(f"Processed alert: {data}")
     return jsonify({"status": "success"}), 200
+
+# Also handle POST at root path (for TradingView)
+@app.route('/', methods=['POST'])
+def root_webhook():
+    return webhook()  # Delegate to the main webhook handler
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
