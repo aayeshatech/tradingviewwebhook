@@ -1,3 +1,5 @@
-Flask
-gunicorn
-requests
+# requirements.txt
+hypercorn==0.16.0
+
+# Procfile
+web: hypercorn app:app --bind 0.0.0.0:$PORT --workers 2
