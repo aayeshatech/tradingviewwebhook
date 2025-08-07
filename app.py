@@ -1,31 +1,37 @@
-# filename: app.py
 from flask import Flask, request, jsonify
-import requests
+import json
+from datetime import datetime
 
 app = Flask(__name__)
 
-@app.route('/alert', methods=['POST'])
-def alert():
+# Health check endpoint
+@app.route('/health')
+def health():
+    return "OK", 200
+
+# Main webhook endpoint (handles both root and /webhook)
+@app.route('/', methods=['GET', 'POST'])
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    if request.method == 'GET':
+        return "Webhook server is running", 200
+        
     data = request.get_json()
+    if not data:
+        return jsonify({"status": "error", "message": "Invalid JSON"}), 400
 
-    message = data.get("message")
-    bot_token = data.get("token")
-    chat_id = data.get("chat_id")
-
-    if not all([message, bot_token, chat_id]):
-        return jsonify({"error": "Missing fields"}), 400
-
-    send_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": message
+    # Process alert
+    log_entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "alert": data
     }
-    response = requests.post(send_url, data=payload)
-
-    if response.status_code == 200:
-        return jsonify({"status": "sent"}), 200
-    else:
-        return jsonify({"error": "Telegram API error", "details": response.text}), 500
+    
+    # Save to file
+    with open('alerts.log', 'a') as f:
+        f.write(json.dumps(log_entry) + '\n')
+    
+    print(f"Processed alert: {data}")
+    return jsonify({"status": "success"}), 200
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host='0.0.0.0', port=10000)
