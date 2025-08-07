@@ -1,45 +1,20 @@
-from flask import Flask, request, jsonify
-import json
-from datetime import datetime
+# requirements.txt additions
+redis==5.0.1
+celery==5.3.4
 
-app = Flask(__name__)
+# app.py
+from celery import Celery
 
-# Health check endpoint (handles GET and HEAD)
-@app.route('/', methods=['GET', 'HEAD'])
-def health_check():
-    if request.method == 'HEAD':
-        # Return headers only (no body) for HEAD requests
-        return '', 200
-    return "Webhook server is running", 200
+celery = Celery('tasks', broker='redis://localhost:6379/0')
 
-# Main webhook endpoint
+@celery.task
+def process_alert(data):
+    # Heavy processing here
+    with open('alerts.log', 'a') as f:
+        f.write(json.dumps(data) + '\n')
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    # Only parse JSON for POST requests
-    if not request.is_json:
-        return jsonify({"status": "error", "message": "Invalid JSON"}), 415
-    
     data = request.get_json()
-    if not data:
-        return jsonify({"status": "error", "message": "Empty JSON"}), 400
-
-    # Process alert
-    log_entry = {
-        "timestamp": datetime.utcnow().isoformat(),
-        "alert": data
-    }
-    
-    # Save to file
-    with open('alerts.log', 'a') as f:
-        f.write(json.dumps(log_entry) + '\n')
-    
-    print(f"Processed alert: {data}")
-    return jsonify({"status": "success"}), 200
-
-# Also handle POST at root path (for TradingView)
-@app.route('/', methods=['POST'])
-def root_webhook():
-    return webhook()  # Delegate to the main webhook handler
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    process_alert.delay(data)  # Async processing
+    return jsonify({"status": "queued"}), 202
