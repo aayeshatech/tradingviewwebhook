@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 import threading
 import queue
+import os
 
 app = Flask(__name__)
 
@@ -30,11 +31,26 @@ def health():
 @app.route('/', methods=['POST'])
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    # Quick validation
+    secret = os.getenv("WEBHOOK_SECRET")
+    provided = request.headers.get("X-Webhook-Secret")
+    data = None
+    if not provided:
+        if request.is_json:
+            data = request.get_json(silent=True)
+            if data:
+                provided = data.get("secret")
+        if not provided:
+            return jsonify({"status": "unauthorized"}), 401
+
+    if not secret or provided != secret:
+        return jsonify({"status": "unauthorized"}), 401
+
     if not request.is_json:
         return jsonify({"status": "error"}), 415
-    
-    data = request.get_json()
+
+    if data is None:
+        data = request.get_json()
+
     if not data:
         return jsonify({"status": "error"}), 400
 
@@ -43,7 +59,7 @@ def webhook():
         "timestamp": datetime.utcnow().isoformat(),
         "alert": data
     })
-    
+
     # Immediate response
     return jsonify({"status": "queued"}), 202  # 202 Accepted
 
